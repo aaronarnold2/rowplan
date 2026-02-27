@@ -1,0 +1,5 @@
+{
+  "name": "RowPlan: Rowing Training Scheduler",
+  "description": "A specialized tool for rowers to plan training periods and generate structured workout schedules as CSV files.",
+  "requestFramePermissions": []
+}
