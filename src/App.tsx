@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Calendar, BarChart3, FileDown, Loader2, CheckCircle2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { GoogleGenAI, Type } from "@google/genai";
 import { TrainingPeriod, Intensity, GeneratedWorkout } from './types';
 
 const INTENSITIES: Intensity[] = ['UT2', 'UT1', 'AT', 'TR', 'AN'];
@@ -16,6 +17,7 @@ export default function App() {
   const [periods, setPeriods] = useState<TrainingPeriod[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastGeneratedCount, setLastGeneratedCount] = useState<number | null>(null);
+  const [generateDetailed, setGenerateDetailed] = useState(true);
 
   const addPeriod = () => {
     const newPeriod: TrainingPeriod = {
@@ -23,6 +25,7 @@ export default function App() {
       name: `Period ${periods.length + 1}`,
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      sessionsPerWeek: 6,
       distribution: { UT2: 70, UT1: 20, AT: 10, TR: 0, AN: 0 },
     };
     setPeriods([...periods, newPeriod]);
@@ -45,13 +48,18 @@ export default function App() {
   };
 
   const downloadCSV = (workouts: GeneratedWorkout[]) => {
-    const headers = ['Date', 'Intensity', 'Workout Description', 'Duration (min)'];
-    const rows = workouts.map(w => [
-      w.date,
-      w.intensity,
-      `"${w.description.replace(/"/g, '""')}"`,
-      w.durationMinutes
-    ]);
+    const headers = generateDetailed 
+      ? ['Date', 'Intensity', 'Workout Description', 'Duration (min)']
+      : ['Date', 'Intensity', 'Duration (min)'];
+
+    const rows = workouts.map(w => {
+      const base = [w.date, w.intensity];
+      if (generateDetailed) {
+        base.push(`"${w.description.replace(/"/g, '""')}"`);
+      }
+      base.push(w.durationMinutes.toString());
+      return base;
+    });
     
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -69,18 +77,43 @@ export default function App() {
     setIsGenerating(true);
     setLastGeneratedCount(null);
     try {
-      const res = await fetch('/api/generate-workouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ periods }),
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Generate a rowing workout schedule based on these training periods: ${JSON.stringify(periods)}. 
+        For each period, ensure the number of workouts per week matches the "sessionsPerWeek" value.
+        For each day in each period, assign a workout intensity (UT2, UT1, AT, TR, AN) following the percentage distribution provided. 
+        UT2: Aerobic Base (long, steady). UT1: Intensive Aerobic. AT: Threshold. TR: Transport. AN: Anaerobic.
+        ${generateDetailed ? 'The workouts should be LAND-BASED (designed for a rowing ergometer, not on-water). Provide specific erg workouts (e.g., 3x20min, 10x500m, etc.).' : 'Just provide the intensity and duration for each day.'}
+        Make the schedule realistic (e.g., rest days, varying intensities).
+        Return an array of objects: { date: "YYYY-MM-DD", intensity: "UT2", description: "Detailed workout description", durationMinutes: 60 }`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                date: { type: Type.STRING },
+                intensity: { type: Type.STRING },
+                description: { type: Type.STRING },
+                durationMinutes: { type: Type.NUMBER }
+              },
+              required: ["date", "intensity", "description", "durationMinutes"]
+            }
+          }
+        }
       });
-      const data = await res.json();
-      if (data.workouts) {
-        downloadCSV(data.workouts);
-        setLastGeneratedCount(data.workouts.length);
+
+      const workouts = JSON.parse(response.text || '[]');
+      if (workouts.length > 0) {
+        downloadCSV(workouts);
+        setLastGeneratedCount(workouts.length);
       }
     } catch (e) {
       console.error('Generation failed', e);
+      alert('Failed to generate workouts. Please check your Gemini API key configuration.');
     } finally {
       setIsGenerating(false);
     }
@@ -112,22 +145,36 @@ export default function App() {
               Define training blocks, set intensity distributions, and generate a CSV workout schedule for your rowing season.
             </p>
           </div>
-          <div className="flex justify-end gap-4">
-            <button 
-              onClick={addPeriod}
-              className="flex items-center gap-2 px-6 py-3 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] transition-all rounded-sm font-mono text-sm uppercase tracking-wider"
-            >
-              <Plus size={18} />
-              Add Block
-            </button>
-            <button 
-              disabled={periods.length === 0 || isGenerating}
-              onClick={generateCSV}
-              className="flex items-center gap-2 px-6 py-3 bg-[#141414] text-[#E4E3E0] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all rounded-sm font-mono text-sm uppercase tracking-wider shadow-lg"
-            >
-              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
-              {isGenerating ? 'Generating...' : 'Download CSV'}
-            </button>
+          <div className="flex flex-col items-end gap-4">
+            <div className="flex items-center gap-3 bg-white/50 p-3 rounded-sm border border-[#141414]/10">
+              <input 
+                type="checkbox" 
+                id="detailed-workouts"
+                checked={generateDetailed}
+                onChange={(e) => setGenerateDetailed(e.target.checked)}
+                className="w-4 h-4 accent-[#141414] cursor-pointer"
+              />
+              <label htmlFor="detailed-workouts" className="text-xs font-mono uppercase tracking-wider cursor-pointer select-none">
+                Generate Land-Based (Erg) Workouts
+              </label>
+            </div>
+            <div className="flex gap-4">
+              <button 
+                onClick={addPeriod}
+                className="flex items-center gap-2 px-6 py-3 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] transition-all rounded-sm font-mono text-sm uppercase tracking-wider"
+              >
+                <Plus size={18} />
+                Add Block
+              </button>
+              <button 
+                disabled={periods.length === 0 || isGenerating}
+                onClick={generateCSV}
+                className="flex items-center gap-2 px-6 py-3 bg-[#141414] text-[#E4E3E0] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all rounded-sm font-mono text-sm uppercase tracking-wider shadow-lg"
+              >
+                {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
+                {isGenerating ? 'Generating...' : 'Download CSV'}
+              </button>
+            </div>
           </div>
         </section>
 
@@ -196,6 +243,20 @@ export default function App() {
                         className="text-[10px] font-mono border border-[#141414]/20 p-1 rounded-sm focus:border-[#141414] outline-none"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center gap-2 text-xs font-mono opacity-60">
+                      <BarChart3 size={14} />
+                      <span>Sessions / Week</span>
+                    </div>
+                    <input 
+                      type="number"
+                      min="1"
+                      max="14"
+                      value={period.sessionsPerWeek}
+                      onChange={(e) => updatePeriod(period.id, { sessionsPerWeek: parseInt(e.target.value) || 1 })}
+                      className="w-full text-[10px] font-mono border border-[#141414]/20 p-1 rounded-sm focus:border-[#141414] outline-none"
+                    />
                   </div>
                 </div>
 

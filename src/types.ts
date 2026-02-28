@@ -5,6 +5,7 @@ export interface TrainingPeriod {
   name: string;
   startDate: string;
   endDate: string;
+  sessionsPerWeek: number;
   distribution: Record<Intensity, number>;
 }
 
