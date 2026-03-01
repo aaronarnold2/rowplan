@@ -331,7 +331,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="max-w-6xl mx-auto p-6 border-t border-[#141414]/10 mt-12 flex flex-col md:flex-row justify-between gap-4 text-[10px] font-mono opacity-40 uppercase tracking-widest">
-        <div>© 2026 RowPlan Systems</div>
+        <div>© 2026 Row3r Systems</div>
         <div className="flex gap-4">
           <span>UT2: 60-70% HRmax</span>
           <span>UT1: 70-80% HRmax</span>
