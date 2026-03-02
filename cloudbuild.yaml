@@ -1,0 +1,36 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'GEMINI_API_KEY=$_GEMINI_API_KEY'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
+      - '.'
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'rowplan'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
+      - '--region'
+      - '$_REGION'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+images:
+  - 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
+
+substitutions:
+  _REGION: us-central1
+  _GEMINI_API_KEY: 'your-key-here' # Default value, should be overridden in trigger
