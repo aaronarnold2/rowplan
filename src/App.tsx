@@ -78,10 +78,15 @@ export default function App() {
     setIsGenerating(true);
     setLastGeneratedCount(null);
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey || apiKey === 'undefined') {
-        throw new Error('Gemini API key is missing or invalid. Please configure GEMINI_API_KEY.');
+      // Try multiple ways to get the key
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+      
+      console.log('Attempting generation with API key length:', apiKey?.length || 0);
+
+      if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey.length < 10) {
+        throw new Error('Gemini API key is missing or invalid. Please ensure GEMINI_API_KEY is set in your environment.');
       }
+      
       const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
@@ -117,9 +122,10 @@ export default function App() {
         downloadCSV(workouts);
         setLastGeneratedCount(workouts.length);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Generation failed', e);
-      alert('Failed to generate workouts. Please check your Gemini API key configuration.');
+      const errorMessage = e?.message || 'Unknown error';
+      alert(`Failed to generate workouts: ${errorMessage}\n\nPlease ensure your Gemini API key is correctly configured.`);
     } finally {
       setIsGenerating(false);
     }
