@@ -6,6 +6,7 @@ export interface TrainingPeriod {
   startDate: string;
   endDate: string;
   sessionsPerWeek: number;
+  volumeMultiplier: number;
   distribution: Record<Intensity, number>;
 }
 

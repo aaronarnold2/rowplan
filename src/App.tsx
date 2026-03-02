@@ -26,6 +26,7 @@ export default function App() {
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       sessionsPerWeek: 6,
+      volumeMultiplier: 1.0,
       distribution: { UT2: 70, UT1: 20, AT: 10, TR: 0, AN: 0 },
     };
     setPeriods([...periods, newPeriod]);
@@ -83,6 +84,7 @@ export default function App() {
         model: "gemini-3-flash-preview",
         contents: `Generate a rowing workout schedule based on these training periods: ${JSON.stringify(periods)}. 
         For each period, ensure the number of workouts per week matches the "sessionsPerWeek" value.
+        The "volumeMultiplier" for each period should scale the overall workload (duration and intensity of sessions). A multiplier of 1.0 is standard, >1.0 increases volume, <1.0 decreases it.
         For each day in each period, assign a workout intensity (UT2, UT1, AT, TR, AN) following the percentage distribution provided. 
         UT2: Aerobic Base (long, steady). UT1: Intensive Aerobic. AT: Threshold. TR: Transport. AN: Anaerobic.
         ${generateDetailed ? 'The workouts should be LAND-BASED (designed for a rowing ergometer, not on-water). Provide specific erg workouts (e.g., 3x20min, 10x500m, etc.).' : 'Just provide the intensity and duration for each day.'}
@@ -256,6 +258,21 @@ export default function App() {
                       value={period.sessionsPerWeek}
                       onChange={(e) => updatePeriod(period.id, { sessionsPerWeek: parseInt(e.target.value) || 1 })}
                       className="w-full text-[10px] font-mono border border-[#141414]/20 p-1 rounded-sm focus:border-[#141414] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center gap-2 text-xs font-mono opacity-60">
+                      <BarChart3 size={14} />
+                      <span>Volume Multiplier ({period.volumeMultiplier}x)</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="0.5"
+                      max="2.0"
+                      step="0.1"
+                      value={period.volumeMultiplier}
+                      onChange={(e) => updatePeriod(period.id, { volumeMultiplier: parseFloat(e.target.value) })}
+                      className="w-full accent-[#141414] h-1 bg-neutral-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
                 </div>
