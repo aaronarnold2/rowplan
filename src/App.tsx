@@ -79,12 +79,13 @@ export default function App() {
     setLastGeneratedCount(null);
     try {
       // Try multiple ways to get the key
-      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+      const apiKey = (window as any).__GEMINI_API_KEY__ || process.env.GEMINI_API_KEY;
       
-      console.log('Attempting generation with API key length:', apiKey?.length || 0);
+      console.log('DEBUG: apiKey source __GEMINI_API_KEY__:', (window as any).__GEMINI_API_KEY__ ? 'FOUND' : 'NOT FOUND');
+      console.log('DEBUG: apiKey source process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'FOUND' : 'NOT FOUND');
 
-      if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey.length < 10) {
-        throw new Error('Gemini API key is missing or invalid. Please ensure GEMINI_API_KEY is set in your environment.');
+      if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
+        throw new Error('Gemini API key is missing. Please ensure GEMINI_API_KEY is set in your environment.');
       }
       
       const ai = new GoogleGenAI({ apiKey });
