@@ -78,14 +78,10 @@ export default function App() {
     setIsGenerating(true);
     setLastGeneratedCount(null);
     try {
-      // Try multiple ways to get the key
-      const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
       
-      console.log('DEBUG: apiKey source VITE_GEMINI_API_KEY:', (import.meta as any).env?.VITE_GEMINI_API_KEY ? 'FOUND' : 'NOT FOUND');
-      console.log('DEBUG: apiKey source process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'FOUND' : 'NOT FOUND');
-
       if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
-        throw new Error('Gemini API key is missing. Please ensure GEMINI_API_KEY is set in your environment.');
+        throw new Error('Gemini API key is missing. Please ensure GEMINI_API_KEY is provided during the build process.');
       }
       
       const ai = new GoogleGenAI({ apiKey });

@@ -11,8 +11,8 @@ RUN npm install
 COPY . .
 
 # Build the application
-# Note: GEMINI_API_KEY must be provided as a build argument if you want it baked into the SPA
 ARG GEMINI_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
 ENV VITE_GEMINI_API_KEY=$GEMINI_API_KEY
 RUN npm run build
 
