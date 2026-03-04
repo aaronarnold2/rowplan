@@ -78,10 +78,21 @@ export default function App() {
     setIsGenerating(true);
     setLastGeneratedCount(null);
     try {
-      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+      let apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+      
+      // If missing at build time, try fetching from server (runtime)
+      if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
+        try {
+          const configRes = await fetch('/api/config');
+          const config = await configRes.json();
+          apiKey = config.GEMINI_API_KEY;
+        } catch (e) {
+          console.error('Failed to fetch runtime config', e);
+        }
+      }
       
       if (!apiKey || apiKey === 'undefined' || apiKey === 'null' || apiKey === '') {
-        throw new Error('Gemini API key is missing. Please ensure GEMINI_API_KEY is provided during the build process.');
+        throw new Error('Gemini API key is missing. Please ensure GEMINI_API_KEY is set in your environment.');
       }
       
       const ai = new GoogleGenAI({ apiKey });

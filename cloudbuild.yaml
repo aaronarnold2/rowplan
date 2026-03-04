@@ -3,8 +3,6 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
-      - '--build-arg'
-      - 'GEMINI_API_KEY=$_GEMINI_API_KEY'
       - '-t'
       - 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
       - '.'
@@ -27,6 +25,8 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'GEMINI_API_KEY=$_GEMINI_API_KEY'
 
 images:
   - 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
