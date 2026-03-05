@@ -24,11 +24,8 @@ RUN npm install --production
 
 # Copy the build output and the server code
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/server.ts ./
+COPY --from=build /app/server.js ./
 COPY --from=build /app/package.json ./
-
-# Install tsx to run the server
-RUN npm install -g tsx
 
 # Cloud Run sets the PORT environment variable
 ENV NODE_ENV=production
@@ -37,4 +34,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Start the server
-CMD ["tsx", "server.ts"]
+CMD ["node", "server.js"]

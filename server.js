@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -11,8 +10,6 @@ async function startServer() {
   const PORT = process.env.PORT || 3000;
 
   // API endpoint to get the Gemini API Key
-  // In a real production app, you'd proxy the request to Gemini instead of exposing the key,
-  // but for this tool, exposing it to the client is what the user expects for their private deployment.
   app.get("/api/config", (req, res) => {
     res.json({
       GEMINI_API_KEY: process.env.GEMINI_API_KEY || ""
@@ -20,12 +17,15 @@ async function startServer() {
   });
 
   if (process.env.NODE_ENV !== "production") {
+    // Dynamic import for Vite to avoid loading it in production
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
+    // Serve static files from the dist directory
     app.use(express.static(path.join(__dirname, "dist")));
     app.get("*", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
@@ -33,7 +33,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
